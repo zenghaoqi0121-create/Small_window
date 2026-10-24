@@ -1,0 +1,16 @@
+import { mkdir, readFile, writeFile } from 'node:fs/promises';
+import { spawnSync } from 'node:child_process';
+import path from 'node:path';
+const client = await readFile(new URL('../src/client.mjs', import.meta.url), 'utf8');
+const deliver = await readFile(new URL('../src/deliver.mjs', import.meta.url), 'utf8');
+await mkdir(new URL('../lib/', import.meta.url), { recursive: true });
+await writeFile(new URL('../lib/client.js', import.meta.url), `window.__ModuleLoader__.load({id:"dsh-shichuang",factory:(require)=>{var exports={};\n${deliver.replace('export function', 'function')}\n${client.replace(/^import[^\n]*\n/, '').replace('export function', 'function')}\nexports.inject=["slots","conversation","connection"];exports.apply=(ctx)=>installClient(ctx,require("react"));return exports;}});\n`);
+if (process.platform !== 'win32') throw new Error('Native helper requires Windows build');
+const compiler = path.join(process.env.WINDIR ?? 'C:\\Windows', 'Microsoft.NET', 'Framework64', 'v4.0.30319', 'csc.exe');
+const result = spawnSync(compiler, ['/nologo', '/target:exe', '/optimize+', '/utf8output', '/r:System.Windows.Forms.dll', '/r:System.Drawing.dll', '/r:System.Web.Extensions.dll', '/out:' + path.resolve('native/Shichuang.exe'), path.resolve('native/Shichuang.cs')], { cwd: process.cwd(), encoding: 'utf8', windowsHide: true });
+process.stdout.write(result.stdout || ''); process.stderr.write(result.stderr || '');
+if (result.error) throw result.error;
+if (result.status !== 0) process.exit(result.status ?? 1);
+const check = spawnSync(path.resolve('native/Shichuang.exe'), ['--self-test'], { encoding: 'utf8', windowsHide: true, timeout: 10000 });
+if (check.status !== 0 || !check.stdout.includes('"ok":true')) throw new Error('Native self-test failed: ' + check.stdout + check.stderr);
+console.log('Built Harness client + native helper; native self-test passed.');

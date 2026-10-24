@@ -1,0 +1,8 @@
+node_modules/
+dist/
+artifacts/
+*.log
+*-contract.tmp
+lib/
+native/*.exe
+*.tgz
