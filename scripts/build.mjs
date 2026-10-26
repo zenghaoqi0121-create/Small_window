@@ -1,10 +1,10 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { spawnSync } from 'node:child_process';
 import path from 'node:path';
-const client = await readFile(new URL('../src/client.mjs', import.meta.url), 'utf8');
-const deliver = await readFile(new URL('../src/deliver.mjs', import.meta.url), 'utf8');
+const modules = await Promise.all(['transcript', 'deliver', 'runtime', 'client'].map(name => readFile(new URL('../src/' + name + '.mjs', import.meta.url), 'utf8')));
+const source = modules.map(code => code.replace(/^import[^\n]*\n/gm, '').replace(/^export /gm, '')).join('\n');
 await mkdir(new URL('../lib/', import.meta.url), { recursive: true });
-await writeFile(new URL('../lib/client.js', import.meta.url), `window.__ModuleLoader__.load({id:"dsh-shichuang",factory:(require)=>{var exports={};\n${deliver.replace('export function', 'function')}\n${client.replace(/^import[^\n]*\n/, '').replace('export function', 'function')}\nexports.inject=["slots","conversation","connection"];exports.apply=(ctx)=>installClient(ctx,require("react"));return exports;}});\n`);
+await writeFile(new URL('../lib/client.js', import.meta.url), `window.__ModuleLoader__.load({id:"dsh-shichuang",factory:(require)=>{var exports={};\n${source}\nexports.inject=["slots","conversation","connection","sessions"];exports.apply=(ctx)=>installClient(ctx,require("react"));return exports;}});\n`);
 if (process.platform !== 'win32') throw new Error('Native helper requires Windows build');
 const compiler = path.join(process.env.WINDIR ?? 'C:\\Windows', 'Microsoft.NET', 'Framework64', 'v4.0.30319', 'csc.exe');
 const result = spawnSync(compiler, ['/nologo', '/target:exe', '/optimize+', '/utf8output', '/r:System.Windows.Forms.dll', '/r:System.Drawing.dll', '/r:System.Web.Extensions.dll', '/out:' + path.resolve('native/Shichuang.exe'), path.resolve('native/Shichuang.cs')], { cwd: process.cwd(), encoding: 'utf8', windowsHide: true });

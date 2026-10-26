@@ -1,20 +1,19 @@
-// Runs synchronously: no await between editor guards and draft mutation.
-export function deliver(item, { sessionId, conversation, inputActions, state, makeFile }) {
-  if (item.sessionId !== sessionId) throw new Error('会话已切换，请回到截图的目标会话。');
-  if (state.phase !== 'plain') throw new Error('当前输入框忙碌，请稍后重试。');
-  const span = inputActions.captureInsertion();
-  const drafts = item.image ? conversation.createDrafts(sessionId, [makeFile(item.image)]) : [];
-  const ids = drafts.map(d => d.id);
-  if (ids.length && !inputActions.addAttachments(ids)) {
-    conversation.releaseDraftAttachments(drafts);
-    throw new Error('输入框暂时无法接收截图。');
-  }
-  const text = `${state.draft ? '\n' : ''}${item.question}`;
+// Never reads or writes the main composer's inputActions or draft ids.
+export async function deliver(item, { binding, conversation, makeFile }) {
+  if (item.sessionId !== binding.session.sessionId) throw new Error('目标会话不匹配。');
+  if (binding.session.getSnapshot().removed) return { status: 'failed', error: '目标会话已删除。' };
+  let drafts;
+  try { drafts = item.image ? conversation.createDrafts(item.sessionId, [makeFile(item.image)]) : []; }
+  catch { return { status: 'failed', error: '截图准备失败，请重新截图。' }; }
   try {
-    if (!inputActions.insertText(text, span)) throw new Error('草稿发生变化，请重新接收。');
-  } catch (error) {
-    ids.forEach(id => inputActions.removeAttachment(id));
+    const outcome = await conversation.sendSession(binding.session, item.question, drafts.map(d => d.id), 'queue');
+    if (outcome.kind !== 'success') {
+      conversation.releaseDraftAttachments(drafts);
+      return { status: 'failed', error: 'Harness 未接收消息，请检查模型和图片支持。' };
+    }
+    return { status: 'accepted' };
+  } catch {
     conversation.releaseDraftAttachments(drafts);
-    throw error;
+    return { status: 'unknown', error: '未能确认发送结果，请核对原会话。不会自动重发。' };
   }
 }
