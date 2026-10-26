@@ -2,6 +2,12 @@
 
 Windows DeepSeek Harness 的截图对话浮窗，包含配套 Skill 与本地窗口组件。沿用 Harness 原会话的模型、账号和上下文，不需要另配模型 API。
 
+## 当前进度（2026-10-26）
+
+0.2.0 已完成直接发送、浮窗回复同步、固定会话、持续追问和停止生成功能，并生成本地安装包。35 项 Node 测试、7 项原生自检及不连接模型的本地窗口测试通过。真实 Harness 与模型的端到端联调仍待完成，详见 [验证记录](docs/VALIDATION.md) 和 [更新记录](docs/CHANGELOG.md)。
+
+本次交付保留当前已安装的 Harness 插件。更新 GitHub 源码不会自动替换 Harness 正在加载的副本；安装新版需按下文重新构建并更新插件来源。
+
 ## 使用
 
 1. 在 Harness 选中一个已有会话，点击输入框旁的「截图提问」。
@@ -41,4 +47,4 @@ npm pack --pack-destination dist
 
 截图只通过本机桥接提交到绑定会话，提交确认后清理桥接图片；主窗口与模型的消息存储仍由 Harness 管理。回复同步使用独立会话订阅，断线只恢复同步，不自动重复提问。停用插件时释放订阅并退出其本地组件。
 
-设计与范围见 [MVP 说明](docs/MVP.md)。Skill 位于 `skills/screen-question/SKILL.md`。
+设计与范围见 [MVP 说明](docs/MVP.md)，版本变化见 [更新记录](docs/CHANGELOG.md)。Skill 位于 `skills/screen-question/SKILL.md`。
